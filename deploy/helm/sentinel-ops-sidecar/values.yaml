@@ -41,7 +41,7 @@ soe: |
 # ── Sidecar ──────────────────────────────────────────────────────────────────
 sidecar:
   image:
-    repository: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar
+    repository: us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar
     tag: latest
     pullPolicy: IfNotPresent
   proxyPort: 15001
@@ -55,7 +55,7 @@ sidecar:
   transparentProxy:
     enabled: false
     initImage:
-      repository: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-init
+      repository: us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-init
       tag: latest
     proxyUid: 1337
 

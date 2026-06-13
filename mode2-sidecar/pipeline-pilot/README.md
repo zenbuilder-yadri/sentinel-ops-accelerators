@@ -46,7 +46,7 @@ file a bug.
 ```
 
 * **No SDK in the agent.** The single integration point is `HTTP_PROXY=http://soe-sidecar:15001`.
-* **Sidecar is a stock public image** — `public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest`.
+* **Sidecar is a stock public image** — `us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar:latest`.
 * **Every CONNECT is evaluated** against the live policy at `api.yadriworks.ai`
   by tenant `yadriworks-demo`, agent ID `devops-agent-mode2`.
 * **Auth is per-tenant API key** (`X-SOE-Tenant-Id` + `X-SOE-Api-Key: sok_...`),

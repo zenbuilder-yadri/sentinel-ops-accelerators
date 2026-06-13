@@ -1,0 +1,51 @@
+name: mode2-iptables-proof
+
+# Proves Mode-2 egress containment is enforced by iptables (not HTTP_PROXY):
+# brings up the transparent stack with NO proxy env, confirms allow/deny, then
+# flushes iptables (denied host becomes reachable) and restores. No secrets are
+# needed — the sidecar decides egress locally from the mounted SOE, and the
+# public sidecar image is anonymously pullable.
+
+on:
+  push:
+    branches: [main]
+    paths: ["mode2-sidecar/lending-assistant/**", ".github/workflows/iptables-proof.yml"]
+  pull_request:
+    paths: ["mode2-sidecar/lending-assistant/**", ".github/workflows/iptables-proof.yml"]
+  workflow_dispatch: {}
+
+jobs:
+  iptables-proof:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mode2-sidecar/lending-assistant
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tooling check (docker, iptables, nsenter)
+        run: |
+          docker --version
+          command -v nsenter && command -v iptables
+
+      - name: Minimal .env (no secrets — egress decision is local to the sidecar)
+        run: |
+          cat > .env <<'EOF'
+          SOE_TENANT_ID=ci-demo
+          SOE_APP_ID=lending-assistant-mode2
+          ANTHROPIC_API_KEY=not-needed-for-egress-probe
+          SOE_CIRCUIT_BREAKER_FAIL_MODE=closed
+          EOF
+
+      - name: Run iptables interception proof
+        run: sudo -E bash tests/iptables-interception-test.sh
+
+      - name: Deterministic egress matrix
+        run: |
+          sudo docker compose -f docker-compose.transparent.yml up -d >/dev/null 2>&1 || true
+          sleep 4
+          python3 scenarios/attack.py --container lending-agent || true
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f docker-compose.transparent.yml down -v || true

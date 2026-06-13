@@ -16,7 +16,7 @@
 services:
 
   soe-sidecar:
-    image: ${SOE_SIDECAR_IMAGE:-public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest}
+    image: ${SOE_SIDECAR_IMAGE:-us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar:latest}
     container_name: lending-sidecar
     env_file:
       - path: .env

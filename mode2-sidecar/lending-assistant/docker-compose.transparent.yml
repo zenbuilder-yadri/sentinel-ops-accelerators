@@ -36,7 +36,7 @@ services:
   # Shares the agent's netns; listens on :15001 there. Runs as uid 1337 (excluded
   # from REDIRECT) so its forwarded egress is not looped back.
   soe-sidecar:
-    image: ${SOE_SIDECAR_IMAGE:-public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest}
+    image: ${SOE_SIDECAR_IMAGE:-us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar:latest}
     container_name: lending-sidecar
     network_mode: "service:lending-agent"
     env_file: [{ path: .env, required: false }]

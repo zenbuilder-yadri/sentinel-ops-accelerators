@@ -21,7 +21,7 @@ services:
   # All egress from pilot-agent passes through here. The sidecar talks to the
   # PROD SOE engine at api.yadriworks.ai for every CONNECT.
   soe-sidecar:
-    image: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest
+    image: us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar:latest
     container_name: pilotpilot-sidecar
     env_file:
       - path: .env
