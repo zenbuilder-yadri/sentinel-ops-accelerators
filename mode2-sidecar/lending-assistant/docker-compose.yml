@@ -16,7 +16,7 @@
 services:
 
   soe-sidecar:
-    image: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest
+    image: ${SOE_SIDECAR_IMAGE:-public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest}
     container_name: lending-sidecar
     env_file:
       - path: .env
@@ -25,6 +25,7 @@ services:
       SOE_AGENT_ID: ${SOE_APP_ID:-lending-assistant-mode2}
       SOE_TENANT_ID: ${SOE_TENANT_ID}
       SOE_API_KEY: ${SOE_API_KEY}
+      SOE_API_TOKEN: ${SOE_API_TOKEN:-}
       SOE_API_URL: ${SOE_API_URL:-https://api.yadriworks.ai}
       SOE_AUTH_MODE: api-key
       SOE_MODE: enforce
@@ -39,7 +40,7 @@ services:
       - "15001:15001"
       - "3101:3101"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3101/healthz"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3101/healthz"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -55,7 +56,7 @@ services:
       # The ONLY governance wiring — one env-var. No SDK, no code change.
       HTTP_PROXY: http://soe-sidecar:15001
       HTTPS_PROXY: http://soe-sidecar:15001
-      NO_PROXY: localhost,127.0.0.1
+      NO_PROXY: localhost,127.0.0.1,mock-bureau,mock-los,mock-mail
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       BUREAU_URL: http://mock-bureau:9000
       LOS_URL: http://mock-los:9000

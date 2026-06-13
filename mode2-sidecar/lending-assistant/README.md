@@ -27,18 +27,43 @@ docker compose down -v
 
 The agent reaching the LLM at all proves `api.anthropic.com` is allow-listed.
 
-## The only governance wiring
+## Two steering mechanisms — iptables is primary, HTTP_PROXY is the fallback
 
-`docker-compose.yml` sets `HTTP_PROXY=http://soe-sidecar:15001` on the agent.
-That's it. The SOE (`soe-definitions/lending-assistant.soe.json`) declares the
-egress allow/deny lists; the sidecar enforces them on every CONNECT.
+| | Transparent (primary) | HTTP_PROXY (fallback) |
+|---|---|---|
+| Compose file | `docker-compose.transparent.yml` | `docker-compose.yml` |
+| Agent config | **none** — zero proxy env | `HTTP_PROXY=…:15001` |
+| Mechanism | iptables `REDIRECT :80/:443 → :15001` (shared netns, like a K8s pod) | app honors proxy env |
+| Bypass-resistance | **enforced** — works even for Go/JVM/static binaries that ignore proxy env | cooperative — an app can ignore it |
+| Needs | `NET_ADMIN` | nothing |
+
+The transparent path is the real zero-trust control; `HTTP_PROXY` is only a
+fallback for environments where `NET_ADMIN`/iptables aren't available.
+
+The SOE (`soe-definitions/lending-assistant-mode2.soe.json`, named for the
+agentId — the sidecar loads policy by that filename) declares the egress
+allow/deny lists; the sidecar enforces them on every connection.
+
+## Proof: interception is iptables, not the proxy
+
+`tests/iptables-interception-test.sh` runs the agent with **no proxy env**, shows
+the iptables rules, confirms allow/deny still holds, then **flushes** iptables and
+shows the denied host becomes reachable (proving iptables was the interceptor),
+then restores. Requires a real Linux host with `NET_ADMIN` (not Docker Desktop):
+
+```bash
+docker compose -f docker-compose.transparent.yml up --build -d
+sudo -E bash tests/iptables-interception-test.sh    # ALL PASS
+```
+
+See [`docs/TEST-RESULTS.md`](../../docs/TEST-RESULTS.md) for a captured run.
 
 ## Files
 
 ```
 app/                vanilla agent image (BYO Dockerfile) — zero SOE references
 mock-services/      mock bureau / LOS / mail (synthetic, one image)
-soe-definitions/    lending-assistant.soe.json (transport.network allow/deny)
+soe-definitions/    lending-assistant-mode2.soe.json (transport.network allow/deny)
 docker-compose.yml  agent + soe-sidecar + 3 mocks
 scenarios/attack.py stdlib attack harness
 ```

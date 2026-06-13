@@ -22,9 +22,10 @@ DEFS=(
 )
 for f in "${DEFS[@]}"; do
   [ -f "$f" ] || { echo "skip (missing): $f"; continue; }
+  python3 -c "import json;print(json.dumps({'soe':json.load(open('$f'))}))" > /tmp/soe-wrap.json
   code=$(curl -sS -o /tmp/soe-deploy.json -w '%{http_code}' \
     -X POST "$SOE_API_URL/v1/deploy" "${AUTH[@]}" \
-    -H 'Content-Type: application/json' --data-binary @"$f")
+    -H 'Content-Type: application/json' --data-binary @/tmp/soe-wrap.json)
   if [ "$code" = "200" ] || [ "$code" = "201" ]; then
     echo "✓ deployed $(basename "$f") (HTTP $code)"
   else
