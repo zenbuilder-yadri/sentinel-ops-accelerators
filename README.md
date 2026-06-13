@@ -1,7 +1,5 @@
 # Sentinel-Ops Accelerators
 
-[![mode2 iptables proof](https://github.com/zenbuilder-yadri/sentinel-ops-accelerators/actions/workflows/iptables-proof.yml/badge.svg)](https://github.com/zenbuilder-yadri/sentinel-ops-accelerators/actions/workflows/iptables-proof.yml)
-
 **Same lending agent, two ways to govern it.** Drop-in examples for putting an AI
 agent inside a [Sentinel-Ops](https://yadriworks.ai) Safe Operating Envelope —
 choose your integration based on whether you own the agent's code.

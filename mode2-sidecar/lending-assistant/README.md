@@ -74,7 +74,8 @@ Two separate concerns — don't conflate them:
 1. **Egress allow/deny (the containment proof) needs NO credentials.** The sidecar
    decides every connection **locally** from the mounted SOE's `transport.network`
    rules. So `scenarios/attack.py` and `tests/iptables-interception-test.sh` run
-   with zero control-plane auth — which is why CI runs them secretless.
+   with zero control-plane auth (no tokens needed to reproduce the proof). A
+   captured live run is in [`docs/TEST-RESULTS.md`](../../docs/TEST-RESULTS.md).
 2. **Control-plane reporting (audit trail, tool-eval, central policy) needs a tenant credential.** Provide one of:
    - `SOE_API_TOKEN=<jwt>` — a Bearer JWT (fine for demos; ~24h lifetime).
    - `SOE_API_KEY=sok_…` — a long-lived API key. **Minting a `sok_` key requires the
