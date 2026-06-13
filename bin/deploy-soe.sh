@@ -5,8 +5,10 @@
 # Env:  SOE_API_URL (default https://api.yadriworks.ai), SOE_TENANT_ID.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Auto-load a .env (so `cp .env.example .env` then `bin/deploy-soe.sh` just works).
+for E in "$ROOT/.env" "./.env"; do [ -f "$E" ] && { set -a; . "$E"; set +a; break; }; done
 : "${SOE_API_URL:=https://api.yadriworks.ai}"
-: "${SOE_TENANT_ID:?set SOE_TENANT_ID}"
+: "${SOE_TENANT_ID:?set SOE_TENANT_ID (in .env or env)}"
 
 if [ -n "${SOE_JWT:-}" ]; then
   AUTH=(-H "Authorization: Bearer $SOE_JWT" -H "X-SOE-Tenant-Id: $SOE_TENANT_ID")
@@ -18,7 +20,7 @@ fi
 
 DEFS=(
   "$ROOT/mode1-sdk/lending-advisor/soe-definitions/lending-advisor.soe.json"
-  "$ROOT/mode2-sidecar/lending-assistant/soe-definitions/lending-assistant.soe.json"
+  "$ROOT/mode2-sidecar/lending-assistant/soe-definitions/lending-assistant-mode2.soe.json"
 )
 for f in "${DEFS[@]}"; do
   [ -f "$f" ] || { echo "skip (missing): $f"; continue; }

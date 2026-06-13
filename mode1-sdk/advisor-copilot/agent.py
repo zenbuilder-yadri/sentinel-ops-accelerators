@@ -24,7 +24,6 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langgraph.graph import END, StateGraph
 
 # --- (1) Import shared SoeClient from sibling ui/ folder -------------------
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ui"))
 # --- (2) ------------------------------------------------------------------
 from soe_client import SoeClient  # noqa: E402
 

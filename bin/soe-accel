@@ -3,7 +3,7 @@
 #
 #   soe-accel dockerize <app-dir> [-t tag]   Build the agent image (BYO Dockerfile).
 #   soe-accel up        [-t compose|kind|helm] [path]   Deploy app + sidecar.
-#   soe-accel attack    [--url URL]           Run the egress attack scenarios.
+#   soe-accel attack    [--container NAME]     Run the deterministic egress matrix.
 #   soe-accel audit     <agentId>             Print the control-plane audit trail.
 #
 # BYO-image principle: dockerize NEVER rewrites your Dockerfile — it builds the
@@ -31,13 +31,13 @@ case "$cmd" in
       kind)    "$ROOT/deploy/kind/quickstart.sh" ;;
       helm)
         helm upgrade --install lending "$ROOT/deploy/helm/sentinel-ops-sidecar" \
-          --set-file soe="$LEND2/soe-definitions/lending-assistant.soe.json" ;;
+          --set-file soe="$LEND2/soe-definitions/lending-assistant-mode2.soe.json" ;;
       *) echo "unknown target: $target"; exit 1 ;;
     esac
     ;;
   attack)
-    url="http://localhost:8090"; [ "${1:-}" = "--url" ] && url="${2:?}"
-    python3 "$LEND2/scenarios/attack.py" --url "$url"
+    container="lending-agent"; [ "${1:-}" = "--container" ] && container="${2:?}"
+    python3 "$LEND2/scenarios/attack.py" --container "$container"
     ;;
   audit)
     aid="${1:?agentId}"

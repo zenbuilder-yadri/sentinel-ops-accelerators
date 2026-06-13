@@ -17,7 +17,7 @@
 
 services:
 
-  # ── 1. SOE sidecar (public ECR image) ────────────────────────────────────
+  # ── 1. SOE sidecar (public image) ────────────────────────────────────
   # All egress from pilot-agent passes through here. The sidecar talks to the
   # PROD SOE engine at api.yadriworks.ai for every CONNECT.
   soe-sidecar:

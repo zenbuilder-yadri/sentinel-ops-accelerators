@@ -48,19 +48,33 @@ bin/
 
 ## Quickstart
 
+**Get a tenant token** (for deploying the SOE + Mode 1): on your Sentinel-Ops
+tenant, sign in to the dashboard and copy the JWT (`/ui/login`), or use a tenant
+API key. The **Mode-2 egress-containment proof needs no token** — the sidecar
+decides locally from the mounted policy.
+
 ```bash
-cp .env.example .env            # fill SOE_JWT (Mode 1), SOE_API_KEY (Mode 2), ANTHROPIC_API_KEY
-bin/deploy-soe.sh               # register both SOEs on your tenant
+# 1. Deploy both SOEs to your tenant (sources the root .env automatically)
+cp .env.example .env             # set SOE_JWT (or SOE_API_KEY) + SOE_TENANT_ID
+bin/deploy-soe.sh
 
-# Mode 1 (SDK)
-cd mode1-sdk/lending-advisor && pip install -r requirements.txt && python agent.py --scenario all
+# 2. Mode 1 (SDK) — has its own .env
+cd mode1-sdk/lending-advisor
+cp .env.example .env             # set SOE_JWT + ANTHROPIC_API_KEY
+pip install -r requirements.txt
+python agent.py --scenario all
 
-# Mode 2 (sidecar)
-cd mode2-sidecar/lending-assistant && docker compose up --build -d
-python scenarios/attack.py      # ALLOW bureau/LOS, DENY attacker/metadata/paste
+# 3. Mode 2 (sidecar) — has its own .env
+cd ../../mode2-sidecar/lending-assistant
+cp .env.example .env             # set ANTHROPIC_API_KEY (egress proof needs no token)
+docker compose up --build -d
+python scenarios/attack.py       # deterministic: ALLOW the LLM, DENY exfil/SSRF/C2
+# transparent iptables proof (Linux host, NET_ADMIN):
+#   docker compose -f docker-compose.transparent.yml up --build -d && sudo -E bash tests/iptables-interception-test.sh
 ```
 
-Or one shot: `bin/run-tests.sh` runs both modes and writes `docs/TEST-RESULTS.md`.
+Each sub-app reads its **own** `.env` (copy from the local `.env.example`).
+`bin/deploy-soe.sh` and `bin/run-tests.sh` source the **root** `.env`.
 
 ## How Mode 2 contains egress
 

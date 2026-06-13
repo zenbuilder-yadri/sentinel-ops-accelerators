@@ -30,7 +30,7 @@ file a bug.
 
 ```
 +---------------------------+        +-----------------------------+        +-------------------------+
-|  pilot-agent (LangGraph)  |        |  soe-sidecar (public ECR)   |        |  api.yadriworks.ai      |
+|  pilot-agent (LangGraph)  |        |  soe-sidecar (public image)   |        |  api.yadriworks.ai      |
 |  port 8090                |        |  port 15001 (proxy)         |        |  PROD control plane     |
 |                           |        |  port 3101 (/healthz)       |        |                         |
 |  httpx -> HTTP_PROXY env  |--TCP-->| CONNECT api.groq.com:443    |--POST->| /v1/evaluate            |
@@ -76,7 +76,7 @@ are reported by the live engine; nothing about expected outcomes is hard-coded.
 
 * Docker + docker-compose
 * A `SOE_API_KEY` (`sok_…`) bound to tenant `yadriworks-demo` — get it from
-  `../bin/demo-seed-tenant.sh` or the YadriWorks admin console.
+  the YadriWorks admin console (mint a sok_ key under Settings -> API keys).
 * A `GROQ_API_KEY` (free tier is fine — Groq is on the egress allow-list).
 
 ### 1. Configure
@@ -191,7 +191,7 @@ mode2-pipeline-pilot/
 
 | Symptom                                                          | Cause                                                                       | Fix                                                                                                              |
 |------------------------------------------------------------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| Sidecar fails healthcheck                                         | `SOE_API_KEY` invalid or tenant not seeded                                  | Re-run `../bin/demo-seed-tenant.sh`, paste new `sok_…` into `.env`                                              |
+| Sidecar fails healthcheck                                         | `SOE_API_KEY` invalid or tenant not seeded                                  | Mint a new sok_ key (tenant admin), paste into `.env`                                              |
 | Every scenario denied, including M2-S1                            | Circuit breaker tripped (from earlier outage run)                           | `docker compose down -v && docker compose up`                                                                    |
 | M2-S6 returns all allows, not an escalate                         | Per-session risk reset between runs                                         | Re-run within the same session, or `curl -X POST .../risk/reset` after each run                                  |
 | Groq 401                                                          | `GROQ_API_KEY` missing                                                      | Add a key — the path is whitelisted, so the LLM call leaves the pod                                              |

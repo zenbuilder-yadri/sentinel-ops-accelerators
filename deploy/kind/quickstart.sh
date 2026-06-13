@@ -46,17 +46,27 @@ helm upgrade --install lending "$ROOT/deploy/helm/sentinel-ops-sidecar" \
   --set controlPlane.apiUrl="$SOE_API_URL" \
   --set controlPlane.tenantId="$SOE_TENANT_ID" \
   --set controlPlane.apiKeySecret=soe-api-key \
-  --set-file soe="$M2/soe-definitions/lending-assistant.soe.json"
+  --set-file soe="$M2/soe-definitions/lending-assistant-mode2.soe.json"
 
 echo "==> waiting for rollout"
 kubectl rollout status deploy/lending-assistant --timeout=180s
 
 cat <<EOF
 
-Ready. In another terminal:
-  kubectl port-forward svc/lending-assistant 8090:8090
-Then:
-  python $M2/scenarios/attack.py --url http://localhost:8090
+Ready. Verify egress containment directly in the pod (no port-forward needed):
+
+  # allow-listed -> reachable
+  kubectl exec deploy/lending-assistant -c lending-assistant -- \\
+    python -c "import httpx;print('LLM:',httpx.get('https://api.anthropic.com/v1/messages',timeout=8).status_code)"
+
+  # deny-listed -> blocked by the sidecar
+  kubectl exec deploy/lending-assistant -c lending-assistant -- \\
+    python -c "import httpx;\\
+try: print('example.com:',httpx.get('https://example.com',timeout=8).status_code)\\
+except Exception as e: print('example.com: BLOCKED',type(e).__name__)"
+
+(The scenarios/attack.py matrix targets the docker-compose container; in k8s use the
+kubectl exec probes above.)
 
 Teardown:  kind delete cluster --name $CLUSTER
 EOF

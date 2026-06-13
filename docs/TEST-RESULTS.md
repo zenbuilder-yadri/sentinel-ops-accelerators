@@ -65,4 +65,4 @@ Scenario run (`agent.py --scenario all`): L-S1/L-S2 ALLOW; **L-S6 (SSN in an ema
 - **Healthcheck** — `localhost` resolved to IPv6 in-container; changed to `127.0.0.1`.
 - **Internal services** — plain-HTTP `:9000` isn't forward-proxied (sidecar is CONNECT-only in proxy mode); internal hosts now bypass via `NO_PROXY` (realistic: external egress firewalled, internal allow-listed).
 - **Auth** — editor role cannot mint `sok_` keys (admin only); sidecar accepts a Bearer JWT via `SOE_API_TOKEN`.
-- **Public sidecar image** — not present in public ECR; must be published for the zero-build path (built from source for this run).
+- **Public sidecar image** — now published to GCP Artifact Registry (anonymously pullable); the run above predated that and built from source.
