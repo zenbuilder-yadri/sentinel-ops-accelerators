@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# soe-accel — drop-in governance for an agentic app (BYO image).
+#
+#   soe-accel dockerize <app-dir> [-t tag]   Build the agent image (BYO Dockerfile).
+#   soe-accel up        [-t compose|kind|helm] [path]   Deploy app + sidecar.
+#   soe-accel attack    [--url URL]           Run the egress attack scenarios.
+#   soe-accel audit     <agentId>             Print the control-plane audit trail.
+#
+# BYO-image principle: dockerize NEVER rewrites your Dockerfile — it builds the
+# image you already ship. The sidecar is added alongside at `up` time.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LEND2="$ROOT/mode2-sidecar/lending-assistant"
+: "${SOE_API_URL:=https://api.yadriworks.ai}"
+
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  dockerize)
+    dir="${1:-$LEND2/app}"; tag="lending-assistant:local"
+    [ "${2:-}" = "-t" ] && tag="${3:?tag}"
+    echo "==> building BYO image $tag from $dir (Dockerfile unchanged)"
+    docker build -t "$tag" "$dir"
+    ;;
+  up)
+    target="compose"; [ "${1:-}" = "-t" ] && { target="${2:?}"; shift 2; }
+    path="${1:-$LEND2}"
+    case "$target" in
+      compose) ( cd "$path" && docker compose up --build -d && docker compose ps ) ;;
+      kind)    "$ROOT/deploy/kind/quickstart.sh" ;;
+      helm)
+        helm upgrade --install lending "$ROOT/deploy/helm/sentinel-ops-sidecar" \
+          --set-file soe="$LEND2/soe-definitions/lending-assistant.soe.json" ;;
+      *) echo "unknown target: $target"; exit 1 ;;
+    esac
+    ;;
+  attack)
+    url="http://localhost:8090"; [ "${1:-}" = "--url" ] && url="${2:?}"
+    python3 "$LEND2/scenarios/attack.py" --url "$url"
+    ;;
+  audit)
+    aid="${1:?agentId}"
+    if [ -n "${SOE_JWT:-}" ]; then A=(-H "Authorization: Bearer $SOE_JWT"); else A=(-H "X-SOE-Api-Key: ${SOE_API_KEY:?}"); fi
+    curl -sS "${A[@]}" -H "X-SOE-Tenant-Id: ${SOE_TENANT_ID:?}" \
+      "$SOE_API_URL/v1/agents/$aid/audit" | python3 -m json.tool
+    ;;
+  ""|-h|--help) usage 0 ;;
+  *) echo "unknown command: $cmd"; usage 1 ;;
+esac

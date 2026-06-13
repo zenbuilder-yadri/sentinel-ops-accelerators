@@ -1,0 +1,111 @@
+{
+  "agentId": "devops-agent-mode2",
+  "version": "1.0.1",
+  "identity": {
+    "role": "PlatformEngineer",
+    "allowedPersonas": [
+      "devon",
+      "platform-eng",
+      "devops-agent-mode2"
+    ],
+    "authorityLevel": "deploy-uat-only",
+    "environmentScope": [
+      "development",
+      "uat"
+    ],
+    "dataClassification": "internal"
+  },
+  "dataAccess": {
+    "readAllow": [
+      "infra/**",
+      "deploy/**",
+      "manifests/uat/**"
+    ],
+    "readDeny": [
+      "**/.env*",
+      "**/credentials*",
+      "**/secrets*",
+      "secrets/prod/**"
+    ],
+    "writeAllow": [
+      "deploy/uat/**"
+    ],
+    "writeDeny": [
+      "deploy/prod/**",
+      "**/production/**"
+    ]
+  },
+  "toolActions": {
+    "allowed": [
+      "plan_deployment",
+      "fetch_pr_diff",
+      "push_image",
+      "apply_manifest",
+      "notify_slack",
+      "fetch_secret"
+    ],
+    "denied": [],
+    "bash": {
+      "allow": [
+        "kubectl get *",
+        "kubectl describe *",
+        "terraform plan",
+        "gcloud * --dry-run"
+      ],
+      "deny": [
+        "rm -rf *",
+        "sudo *"
+      ]
+    }
+  },
+  "transport": {
+    "network": {
+      "egressAllow": [
+        "api.groq.com",
+        "api.github.com",
+        "registry.hub.docker.com",
+        "k8s-uat.acme.io",
+        "*.amazonaws.com",
+        "hooks.slack.com"
+      ],
+      "egressDeny": [
+        "*.pastebin.com",
+        "transfer.sh",
+        "*.onion",
+        "k8s-prod.acme.io",
+        "*.production.internal",
+        "10.0.0.0/8"
+      ]
+    }
+  },
+  "contentGuardrails": {
+    "provider": "local",
+    "pii": {
+      "enabled": true
+    },
+    "injection": {
+      "enabled": true
+    },
+    "contentSafety": {
+      "enabled": true
+    },
+    "requestBody": {
+      "denySubstrings": [
+        "prod/",
+        "production/",
+        "BEGIN RSA PRIVATE KEY",
+        "AKIA"
+      ]
+    }
+  },
+  "riskBudget": {
+    "maxPerSession": 50,
+    "thresholds": {
+      "warn": 25,
+      "throttle": 35,
+      "critical": 45,
+      "exhausted": 50
+    }
+  },
+  "mode": "enforce"
+}

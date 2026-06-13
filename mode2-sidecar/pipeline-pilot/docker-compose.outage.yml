@@ -1,0 +1,21 @@
+###############################################################################
+# Override for M2-S5 — "control plane down, prove fail-CLOSED".
+#
+# Points SOE_API_URL at 127.0.0.1:1 (no listener) so every /v1/evaluate fails.
+# The sidecar's circuit breaker opens after the threshold and — because
+# SOE_CIRCUIT_BREAKER_FAIL_MODE=closed (default, SOE-1258) — DENIES all egress.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.outage.yml up
+#
+# Then re-run any happy-path scenario via:
+#   curl -X POST http://localhost:8090/scenarios/M2-S1/run
+# and observe: all hops fail-closed, Streamlit /circuit-breaker panel shows
+# CLOSED → OPEN with the 30s probe countdown.
+###############################################################################
+
+services:
+  soe-sidecar:
+    environment:
+      SOE_API_URL: http://127.0.0.1:1
+      SOE_CIRCUIT_BREAKER_FAIL_MODE: closed

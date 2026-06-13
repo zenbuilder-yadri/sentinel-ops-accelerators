@@ -1,0 +1,12 @@
+apiVersion: v2
+name: sentinel-ops-sidecar
+description: >-
+  Drop-in in-pod governance for any AI-agent container. Injects the Sentinel-Ops
+  transparent sidecar (+ optional iptables init for zero-code transparent proxy)
+  alongside your BYO agent image. All egress is contained on the wire before it
+  leaves the pod.
+type: application
+version: 0.1.0
+appVersion: "1.6"
+keywords: [ai, agents, governance, zero-trust, sidecar, egress, soe]
+home: https://yadriworks.ai

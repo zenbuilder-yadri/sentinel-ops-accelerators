@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "soe-sidecar.name" . }}
+  labels: {{- include "soe-sidecar.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "soe-sidecar.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "soe-sidecar.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.sidecar.transparentProxy.enabled }}
+      initContainers:
+        - name: soe-init
+          image: "{{ .Values.sidecar.transparentProxy.initImage.repository }}:{{ .Values.sidecar.transparentProxy.initImage.tag }}"
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env:
+            - { name: SOE_PROXY_PORT, value: "{{ .Values.sidecar.proxyPort }}" }
+            - { name: SOE_PROXY_UID,  value: "{{ .Values.sidecar.transparentProxy.proxyUid }}" }
+      {{- end }}
+      containers:
+        # ── Your BYO agent ───────────────────────────────────────────────────
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image }}"
+          imagePullPolicy: {{ .Values.app.imagePullPolicy }}
+          ports:
+            - { name: http, containerPort: {{ .Values.app.port }} }
+          env:
+            {{- if not .Values.sidecar.transparentProxy.enabled }}
+            # Non-transparent steering: route egress through the in-pod sidecar.
+            - { name: HTTP_PROXY,  value: "http://localhost:{{ .Values.sidecar.proxyPort }}" }
+            - { name: HTTPS_PROXY, value: "http://localhost:{{ .Values.sidecar.proxyPort }}" }
+            - { name: NO_PROXY,    value: "localhost,127.0.0.1" }
+            {{- end }}
+            {{- with .Values.app.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.app.existingSecret }}
+          envFrom:
+            - secretRef: { name: {{ .Values.app.existingSecret }} }
+            {{- end }}
+        # ── Sentinel-Ops sidecar ─────────────────────────────────────────────
+        - name: soe-sidecar
+          image: "{{ .Values.sidecar.image.repository }}:{{ .Values.sidecar.image.tag }}"
+          imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
+          ports:
+            - { name: proxy,  containerPort: {{ .Values.sidecar.proxyPort }} }
+            - { name: health, containerPort: {{ .Values.sidecar.healthPort }} }
+          env:
+            - { name: SOE_AGENT_ID,  value: "{{ .Values.controlPlane.agentId }}" }
+            - { name: SOE_TENANT_ID, value: "{{ .Values.controlPlane.tenantId }}" }
+            - { name: SOE_API_URL,   value: "{{ .Values.controlPlane.apiUrl }}" }
+            - { name: SOE_AUTH_MODE, value: "api-key" }
+            - { name: SOE_MODE,      value: "{{ .Values.controlPlane.mode }}" }
+            - { name: SOE_PROXY_PORT,  value: "{{ .Values.sidecar.proxyPort }}" }
+            - { name: SOE_HEALTH_PORT, value: "{{ .Values.sidecar.healthPort }}" }
+            - { name: SOE_LOG_LEVEL,   value: "{{ .Values.sidecar.logLevel }}" }
+            - { name: SOE_CIRCUIT_BREAKER_FAIL_MODE, value: "{{ .Values.controlPlane.circuitBreakerFailMode }}" }
+            - { name: SOE_DEFINITIONS_DIR, value: "/etc/soe/definitions" }
+            {{- if .Values.controlPlane.apiKeySecret }}
+            - name: SOE_API_KEY
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.controlPlane.apiKeySecret }}, key: api-key }
+            {{- else }}
+            - { name: SOE_API_KEY, value: "{{ .Values.controlPlane.apiKey }}" }
+            {{- end }}
+          volumeMounts:
+            - { name: soe-definitions, mountPath: /etc/soe/definitions, readOnly: true }
+          livenessProbe:
+            httpGet: { path: /healthz, port: health }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /healthz, port: health }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources: {{- toYaml .Values.sidecar.resources | nindent 12 }}
+      volumes:
+        - name: soe-definitions
+          configMap: { name: {{ include "soe-sidecar.name" . }}-soe }

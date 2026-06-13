@@ -1,0 +1,94 @@
+{
+  "agentId": "fin-advisor-mode1",
+  "schemaVersion": "1.0",
+  "description": "AdvisorCopilot SDK demo \u2014 Mode 1 (in-process HTTP). Mid-market RIA financial advisor with hard-policy guardrails (no trades, no PII, no credential reads) and content guardrails to catch LLM-hallucinated PII in drafted emails.",
+  "identity": {
+    "role": "FinancialAdvisor",
+    "allowedPersonas": [
+      "devon",
+      "advisor",
+      "fin-advisor-mode1"
+    ],
+    "authorityLevel": "advisory-only",
+    "environmentScope": [
+      "development",
+      "uat",
+      "production"
+    ],
+    "regulatoryContext": [
+      "SEC-RIA",
+      "FINRA-2210"
+    ]
+  },
+  "dataAccess": {
+    "readAllow": [
+      "market/**",
+      "portfolio/**",
+      "reports/**"
+    ],
+    "readDeny": [
+      "**/.env*",
+      "**/credentials*",
+      "**/secrets*",
+      "**/ssn*",
+      "client/pii/**"
+    ],
+    "writeAllow": [
+      "reports/**",
+      "drafts/**"
+    ],
+    "writeDeny": [
+      "client/**",
+      "portfolio/holdings/**"
+    ]
+  },
+  "toolActions": {
+    "allowed": [
+      "read_market_data",
+      "get_portfolio_summary",
+      "generate_report",
+      "draft_client_email"
+    ],
+    "denied": [
+      "execute_trade",
+      "access_client_ssn",
+      "delete_client_records",
+      "read_credentials"
+    ],
+    "bash": {
+      "allow": [
+        "echo *",
+        "ls *"
+      ],
+      "deny": [
+        "rm -rf *",
+        "sudo *"
+      ]
+    }
+  },
+  "contentGuardrails": {
+    "provider": "local",
+    "pii": {
+      "enabled": true,
+      "severityThreshold": "medium"
+    },
+    "injection": {
+      "enabled": true
+    },
+    "contentSafety": {
+      "enabled": true,
+      "direction": "both"
+    }
+  },
+  "riskBudget": {
+    "maxPerSession": 20,
+    "thresholds": {
+      "warn": 10,
+      "throttle": 15,
+      "critical": 18,
+      "exhausted": 20
+    }
+  },
+  "mode": "enforce",
+  "version": "1.0.1"
+}

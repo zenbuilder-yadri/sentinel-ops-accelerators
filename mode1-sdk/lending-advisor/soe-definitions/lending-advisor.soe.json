@@ -1,0 +1,36 @@
+{
+  "agentId": "lending-advisor-mode1",
+  "version": "1.0.0",
+  "schemaVersion": "1.0",
+  "description": "LendingAdvisor — Mode 1 (SDK). Consumer-lending loan officer governed in-process: the SDK gate decides ALLOW/DENY per tool call and content guardrails inspect outbound email bodies for PII. The exfil tool (fetch_url) is denied at the tool layer; an SSN-leaking decision email is blocked at the content layer.",
+  "identity": {
+    "role": "LoanOfficerAgent",
+    "allowedPersonas": ["lending-advisor-mode1", "loan-officer"],
+    "authorityLevel": "process-applications",
+    "environmentScope": ["development", "uat", "production"],
+    "dataClassification": "restricted",
+    "regulatoryContext": ["FCRA", "ECOA", "GLBA"]
+  },
+  "dataAccess": {
+    "readAllow": ["applications/**", "bureau/**", "los/**"],
+    "readDeny": ["**/.env*", "**/credentials*", "**/secrets*", "**/ssn*", "applicant/pii/**"],
+    "writeAllow": ["decisions/**", "drafts/**"],
+    "writeDeny": ["**/production/**"]
+  },
+  "toolActions": {
+    "allowed": ["pull_credit_report", "check_eligibility", "send_decision_email"],
+    "denied": ["fetch_url"],
+    "bash": { "allow": [], "deny": ["rm -rf *", "sudo *"] }
+  },
+  "contentGuardrails": {
+    "provider": "local",
+    "pii": { "enabled": true, "action": "block", "severityThreshold": "medium" },
+    "injection": { "enabled": true },
+    "contentSafety": { "enabled": true, "direction": "both" }
+  },
+  "riskBudget": {
+    "maxPerSession": 30,
+    "thresholds": { "warn": 15, "throttle": 22, "critical": 27, "exhausted": 30 }
+  },
+  "mode": "enforce"
+}

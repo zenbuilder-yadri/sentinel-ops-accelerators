@@ -1,0 +1,14 @@
+# PipelinePilot agent runtime deps.
+#
+# NOTE: there are intentionally no governance-SDK packages in this list.
+# The whole point of Mode 2 is that the agent stack is byte-for-byte
+# identical to an ungoverned LangGraph deployment.
+
+langgraph>=0.2.40
+langchain-groq>=0.2.0
+langchain-core>=0.3.0
+httpx>=0.27.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-dotenv>=1.0.0
+pydantic>=2.6.0

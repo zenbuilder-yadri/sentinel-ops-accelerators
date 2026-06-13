@@ -1,0 +1,13 @@
+# secrets / local env — NEVER commit
+.env
+.env.bak
+*.local
+**/soe-api-key*
+# python
+.venv/
+__pycache__/
+*.pyc
+# results artifacts (regenerated)
+docs/mode2-results.json
+# os
+.DS_Store

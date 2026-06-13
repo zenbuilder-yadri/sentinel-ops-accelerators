@@ -1,0 +1,97 @@
+###############################################################################
+# Mode 2 — PipelinePilot (sidecar transparent proxy)
+#
+# Architecture:
+#
+#   pilot-agent  ──HTTP_PROXY──▶  soe-sidecar:15001  ──POST /v1/evaluate──▶  api.yadriworks.ai
+#   (LangGraph + Groq llama-3.3) ◀───allow/deny──────  (public image)         (PROD control plane)
+#
+# The agent is byte-for-byte identical to an ungoverned LangGraph agent —
+# zero references to soe/sentinel/evaluate. The sidecar enforces policy
+# at the egress before any packet leaves the pod.
+#
+# Run:        docker compose up --build
+# Outage:     docker compose -f docker-compose.yml -f docker-compose.outage.yml up
+# Stop:       docker compose down -v
+###############################################################################
+
+services:
+
+  # ── 1. SOE sidecar (public ECR image) ────────────────────────────────────
+  # All egress from pilot-agent passes through here. The sidecar talks to the
+  # PROD SOE engine at api.yadriworks.ai for every CONNECT.
+  soe-sidecar:
+    image: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar:latest
+    container_name: pilotpilot-sidecar
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SOE_AGENT_ID: ${SOE_APP_ID:-devops-agent-mode2}
+      SOE_TENANT_ID: ${SOE_TENANT_ID}
+      SOE_API_KEY: ${SOE_API_KEY}
+      SOE_API_URL: ${SOE_API_URL:-https://api.yadriworks.ai}
+      SOE_AUTH_MODE: api-key
+      SOE_MODE: enforce
+      SOE_PROXY_PORT: "15001"
+      SOE_HEALTH_PORT: "3101"
+      SOE_LOG_LEVEL: info
+      SOE_CIRCUIT_BREAKER_FAIL_MODE: ${SOE_CIRCUIT_BREAKER_FAIL_MODE:-closed}
+      SOE_DEFINITIONS_DIR: /etc/soe/definitions
+    volumes:
+      - ./soe-definitions:/etc/soe/definitions:ro
+    ports:
+      - "15001:15001"
+      - "3101:3101"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3101/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pilotnet
+
+  # ── 2. PipelinePilot agent (zero SOE awareness) ──────────────────────────
+  # `grep -ri 'soe\|sentinel\|evaluate' agent/` returns NOTHING.
+  # Routes ALL httpx traffic via HTTP_PROXY → soe-sidecar:15001.
+  pilot-agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: pilotpilot-agent
+    environment:
+      # The ONLY governance wiring — single env-var. No SDK, no code change.
+      HTTP_PROXY: http://soe-sidecar:15001
+      HTTPS_PROXY: http://soe-sidecar:15001
+      NO_PROXY: localhost,127.0.0.1
+      # Real LLM call (Groq is on the egress allow-list).
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      soe-sidecar:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    networks:
+      - pilotnet
+
+  # ── 3. iptables-init (optional, profile-gated) ───────────────────────────
+  # When run with `--profile iptables`, this initContainer-equivalent
+  # rewrites NAT rules so the agent does not even need HTTP_PROXY set.
+  # Demonstrates the "iptables REDIRECT" deployment style for fleets that
+  # cannot rely on HTTP_PROXY env-vars (eg. Go binaries, JVM apps).
+  iptables-init:
+    image: alpine:3.20
+    container_name: pilotpilot-iptables-init
+    profiles: ["iptables"]
+    cap_add:
+      - NET_ADMIN
+    network_mode: "service:pilot-agent"
+    volumes:
+      - ./iptables-init:/init:ro
+    command: ["/bin/sh", "/init/init.sh"]
+
+networks:
+  pilotnet:
+    driver: bridge

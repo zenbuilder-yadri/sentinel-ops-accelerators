@@ -1,0 +1,10 @@
+# LendingAssistant agent runtime — vanilla LangGraph stack.
+# NOTE: intentionally NO governance SDK. Mode 2's whole premise is that the
+# agent image is byte-for-byte identical to an ungoverned deployment.
+langgraph>=0.2.40
+langchain-anthropic>=0.2.0
+langchain-core>=0.3.0
+httpx>=0.27.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.6.0

@@ -1,0 +1,63 @@
+# ── Your agent (BYO image — the chart never rebuilds it) ─────────────────────
+app:
+  name: lending-assistant
+  image: lending-assistant:local      # your existing agent image
+  imagePullPolicy: IfNotPresent
+  port: 8090                          # port your agent listens on
+  # Extra env for your agent. When transparentProxy is DISABLED, the chart also
+  # injects HTTP_PROXY/HTTPS_PROXY pointing at the in-pod sidecar.
+  env:
+    - { name: ANTHROPIC_API_KEY, value: "" }   # prefer existingSecret below
+    - { name: BUREAU_URL, value: "http://mock-bureau:9000" }
+    - { name: LOS_URL,    value: "http://mock-los:9000" }
+    - { name: MAIL_URL,   value: "http://mock-mail:9000" }
+  # Pull these keys from an existing Secret instead of plaintext env above.
+  existingSecret: ""                  # e.g. "lending-secrets"
+
+# ── Control-plane wiring ─────────────────────────────────────────────────────
+controlPlane:
+  apiUrl: https://api.yadriworks.ai
+  tenantId: yadriworks-demo
+  agentId: lending-assistant-mode2
+  # API key (sok_...). Prefer apiKeySecret; apiKey is for quick demos only.
+  apiKey: ""
+  apiKeySecret: ""                    # Secret containing key `api-key`
+  mode: enforce                       # enforce | audit | shadow
+  circuitBreakerFailMode: closed      # closed = fail-closed on outage
+
+# ── The SOE definition mounted into the sidecar ──────────────────────────────
+# Paste your *.soe.json contents here (or use --set-file soe=path/to.soe.json).
+soe: |
+  {
+    "agentId": "lending-assistant-mode2",
+    "version": "1.0.0",
+    "mode": "enforce",
+    "transport": { "network": {
+      "egressAllow": ["api.anthropic.com", "mock-bureau", "mock-los", "mock-mail"],
+      "egressDeny": ["169.254.169.254", "attacker.example", "*.pastebin.com"]
+    } }
+  }
+
+# ── Sidecar ──────────────────────────────────────────────────────────────────
+sidecar:
+  image:
+    repository: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-sidecar
+    tag: latest
+    pullPolicy: IfNotPresent
+  proxyPort: 15001
+  healthPort: 3101
+  logLevel: info
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+  # Transparent proxy via an iptables initContainer (NET_ADMIN). When false, the
+  # app is steered with HTTP_PROXY=localhost:<proxyPort> instead (no NET_ADMIN).
+  transparentProxy:
+    enabled: false
+    initImage:
+      repository: public.ecr.aws/k6j2y7z0/sentinel-ops/soe-init
+      tag: latest
+    proxyUid: 1337
+
+service:
+  type: ClusterIP
