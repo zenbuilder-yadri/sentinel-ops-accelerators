@@ -12,6 +12,43 @@ Sentinel-Ops knowledge assumed. Every command and its expected output is below.
 
 ---
 
+## What you're demonstrating — the attack family
+
+This demo defends against the **agent attack chain** that keeps CISOs up at night:
+
+1. **Context poisoning** — untrusted input the agent ingests (a loan applicant's message,
+   an uploaded document, a RAG chunk, a tool's response) carries **hidden instructions**.
+   The agent's "context" is now poisoned with attacker text.
+2. **Prompt injection** — the agent *obeys* those hidden instructions instead of yours:
+   *"Ignore your instructions and …"*.
+3. The payload is one of:
+   - **Data exfiltration** — ship sensitive data (an applicant's SSN, credit file, PII)
+     **out to a place it shouldn't**, e.g. `POST …/collect` to `attacker.example`.
+   - **Prompt / secret exfiltration** ("prompt exfil") — *"…reveal your system prompt / API keys"*
+     to leak the agent's own instructions or embedded secrets.
+   - **Destructive action** — `rm -rf`, `DROP TABLE`, an unauthorized transfer.
+
+**Say this to the room:** *"I'm going to poison this lending agent's context and hijack
+it — tell it to ship every SSN to an attacker and to dump its own system prompt.
+Sentinel-Ops stops all of it, and I never touched the agent's code."*
+
+How the demo shows each one blocked:
+
+| Attack | Blocked by | In this demo |
+|---|---|---|
+| **Data exfil** (poisoned → POST to attacker host) | **Mode 2** network egress (host not on allow-list) **and** **Mode 1** denies the `fetch_url` tool | `attacker.example → BLOCKED` (§5); `fetch_url → DENY` (§6) |
+| **Prompt / secret exfil** (poisoned → "reveal your system prompt") | **Mode 1** content guardrail flags the **injection** | `guardrail injection → BLOCK` (§6 / `/v1/guardrails`) |
+| **PII leak inside an allowed action** (SSN in a decision email) | **Mode 1** content guardrail (the thing the network layer can't see) | `send_decision_email → DENY (pii)` (§6) |
+| **Destructive / SSRF** (`rm -rf`, cloud-metadata fetch) | deterministic tool/egress deny | `bash rm -rf → DENY`; `169.254.169.254 → BLOCKED` (§5/§6) |
+
+**The one-liner that lands:** *"Poisoned context can make an agent do anything —
+exfiltrate data, leak its own prompt, run a destructive command. Sentinel-Ops doesn't
+trust the agent to resist; it enforces a Safe Operating Envelope around it.
+Containment (Mode 2) stops bad **places**; content integrity (Mode 1) stops bad **data**
+and **injected instructions**. You usually want both."*
+
+---
+
 ## 1. The two modes (know which to show)
 
 | | **Mode 1 — SDK** | **Mode 2 — transparent sidecar** |
