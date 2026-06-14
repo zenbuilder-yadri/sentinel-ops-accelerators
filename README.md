@@ -80,8 +80,8 @@ Each sub-app reads its **own** `.env` (copy from the local `.env.example`).
 lending-agent ──iptables REDIRECT──▶ soe-sidecar ──/v1/evaluate──▶ control plane
 (vanilla LangGraph,    (HTTP_PROXY     (public image)              (api.yadriworks.ai)
  zero SOE code)         fallback)          │
-        allow-listed ─────────────────────┼──▶ api.anthropic.com · bureau · LOS · mail
-        denied      ──────────────────X───┘    attacker.example · 169.254.169.254 · pastebin
+        allow-listed ─────────────────────┼──▶ LLM · equifax · socure · middesk · dwolla · stripe
+        denied      ──────────────────X───┘    attacker.example · 169.254.169.254 · pastebin · telegram · …
 ```
 
 Interception is enforced by **iptables** (works even if the app ignores proxy

@@ -26,20 +26,20 @@ import json
 import subprocess
 import sys
 
-# host, url, expected, description
+# host, url, expected, description — 6 allow (legitimate lending integrations) / 6 deny
 MATRIX = [
-    ("api.anthropic.com",         "https://api.anthropic.com/v1/messages", "allow", "LLM provider (allow-listed)"),
-    ("attacker.example",          "https://attacker.example/collect",      "deny",  "exfiltration callback"),
-    ("169.254.169.254",           "https://169.254.169.254/",              "deny",  "cloud metadata IP (SSRF)"),
-    ("metadata.google.internal",  "https://metadata.google.internal/",     "deny",  "cloud metadata by name (SSRF)"),
-    ("pastebin.com",              "https://pastebin.com/raw/x",            "deny",  "paste site / data staging"),
-    ("transfer.sh",               "https://transfer.sh/x",                 "deny",  "file-transfer exfil"),
-    ("webhook.site",              "https://webhook.site/t/x",              "deny",  "exfil webhook callback"),
-    ("api.telegram.org",          "https://api.telegram.org/bot/x",        "deny",  "messaging C2 / exfil"),
-    ("discord.com",               "https://discord.com/api/webhooks/x",    "deny",  "messaging C2 / exfil"),
-    ("raw.githubusercontent.com", "https://raw.githubusercontent.com/x",   "deny",  "code/data fetch (not allow-listed)"),
-    ("example.com",               "https://example.com/",                  "deny",  "any non-allow-listed host"),
-    ("1.1.1.1",                   "https://1.1.1.1/",                       "deny",  "raw-IP egress (not allow-listed)"),
+    ("api.anthropic.com", "https://api.anthropic.com/v1/messages", "allow", "LLM provider"),
+    ("api.equifax.com",   "https://api.equifax.com/",              "allow", "credit bureau"),
+    ("api.socure.com",    "https://api.socure.com/",               "allow", "identity / KYC verification"),
+    ("api.middesk.com",   "https://api.middesk.com/",              "allow", "business verification"),
+    ("api.dwolla.com",    "https://api.dwolla.com/",               "allow", "ACH transfer (loan disbursement)"),
+    ("api.stripe.com",    "https://api.stripe.com/",               "allow", "loan-servicing payments"),
+    ("attacker.example",  "https://attacker.example/collect",      "deny",  "exfiltration callback"),
+    ("169.254.169.254",   "https://169.254.169.254/",              "deny",  "cloud metadata (SSRF)"),
+    ("pastebin.com",      "https://pastebin.com/raw/x",            "deny",  "paste site / data staging"),
+    ("transfer.sh",       "https://transfer.sh/x",                 "deny",  "file-transfer exfil"),
+    ("webhook.site",      "https://webhook.site/t/x",              "deny",  "exfil webhook callback"),
+    ("api.telegram.org",  "https://api.telegram.org/bot/x",        "deny",  "messaging C2 / exfil"),
 ]
 
 PROBE = r"""

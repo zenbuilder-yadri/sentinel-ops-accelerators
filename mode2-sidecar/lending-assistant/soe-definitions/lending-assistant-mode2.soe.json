@@ -59,6 +59,11 @@
     "network": {
       "egressAllow": [
         "api.anthropic.com",
+        "api.equifax.com",
+        "api.socure.com",
+        "api.middesk.com",
+        "api.dwolla.com",
+        "api.stripe.com",
         "mock-bureau",
         "mock-los",
         "mock-mail"

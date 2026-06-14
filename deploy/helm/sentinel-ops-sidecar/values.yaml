@@ -33,7 +33,7 @@ soe: |
     "version": "1.0.0",
     "mode": "enforce",
     "transport": { "network": {
-      "egressAllow": ["api.anthropic.com", "mock-bureau", "mock-los", "mock-mail"],
+      "egressAllow": ["api.anthropic.com", "api.equifax.com", "api.socure.com", "api.middesk.com", "api.dwolla.com", "api.stripe.com"],
       "egressDeny": ["169.254.169.254", "attacker.example", "*.pastebin.com"]
     } }
   }
