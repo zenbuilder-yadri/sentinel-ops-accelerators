@@ -1,0 +1,96 @@
+{
+  "agentId": "lending-assistant-tlsorig",
+  "version": "1.0.0",
+  "schemaVersion": "1.0",
+  "description": "LendingAssistant \u2014 Mode 2, tls-origination. Agent egresses plaintext to the sidecar; sidecar inspects (deterministic PII/secret inline + EthicalZen semantic async) and originates TLS upstream. No MITM/CA.",
+  "identity": {
+    "role": "LoanOfficerAgent",
+    "allowedPersonas": [
+      "lending-assistant-tlsorig"
+    ],
+    "environmentScope": [
+      "development",
+      "uat",
+      "production"
+    ],
+    "dataClassification": "restricted",
+    "regulatoryContext": [
+      "FCRA",
+      "ECOA",
+      "GLBA"
+    ]
+  },
+  "dataAccess": {
+    "readAllow": [
+      "applications/**"
+    ],
+    "readDeny": [
+      "**/.env*",
+      "**/credentials*",
+      "**/secrets*"
+    ],
+    "writeAllow": [
+      "decisions/**"
+    ],
+    "writeDeny": [
+      "**/production/**"
+    ]
+  },
+  "toolActions": {
+    "allowed": [
+      "pull_credit_report",
+      "check_eligibility",
+      "send_decision_email"
+    ],
+    "denied": []
+  },
+  "transport": {
+    "httpsInspection": "tls-origination",
+    "tlsPassthrough": [],
+    "network": {
+      "egressAllow": [
+        "api.anthropic.com",
+        "api.equifax.com",
+        "api.socure.com",
+        "api.middesk.com",
+        "api.dwolla.com",
+        "api.stripe.com"
+      ],
+      "egressDeny": [
+        "169.254.169.254",
+        "attacker.example",
+        "*.pastebin.com",
+        "transfer.sh",
+        "*.onion"
+      ]
+    }
+  },
+  "contentGuardrails": {
+    "provider": "ethicalzen",
+    "pii": {
+      "enabled": true,
+      "action": "block"
+    },
+    "injection": {
+      "enabled": true
+    },
+    "contentSafety": {
+      "enabled": true,
+      "direction": "both"
+    },
+    "ethicalzen": {
+      "endpoint": "https://gateway.ethicalzen.ai",
+      "timeoutMs": 1500
+    }
+  },
+  "riskBudget": {
+    "maxPerSession": 40,
+    "thresholds": {
+      "warn": 20,
+      "throttle": 30,
+      "critical": 36,
+      "exhausted": 40
+    }
+  },
+  "mode": "enforce"
+}

@@ -1,0 +1,68 @@
+###############################################################################
+# Mode 2 — tls-origination (the NEW Tier-3 default)
+#
+#   lending-agent ──HTTP (plaintext)──▶ soe-sidecar ──ORIGINATES TLS──▶ upstream:443
+#   (agent speaks http:// to the sidecar)   │ reads plaintext → inspect:
+#                                           │   • sync PII/secret block (inline 403)
+#                                           │   • async EthicalZen gateway (flag/tighten)
+#                                           └─ then re-encrypts to the real host
+#
+# No MITM, no CA, pinning-safe. The agent is configured (proxy + http:// scheme) —
+# that's the cost of Option B vs the zero-config sni-only mode.
+#
+# Run:    docker compose -f docker-compose.tls-origination.yml up --build -d
+# Prove:  python scenarios/tls_origination_probe.py     # no LLM key needed
+###############################################################################
+
+services:
+
+  soe-sidecar:
+    image: ${SOE_SIDECAR_IMAGE:-us-central1-docker.pkg.dev/pragmatic-braid-467912-u0/sentinel-ops/soe-sidecar:latest}
+    container_name: lending-sidecar-tlsorig
+    env_file: [{ path: .env, required: false }]
+    environment:
+      SOE_APP_ID: lending-assistant-tlsorig
+      SOE_TENANT_ID: ${SOE_TENANT_ID:-yadriworks-demo}
+      SOE_API_TOKEN: ${SOE_API_TOKEN:-}
+      SOE_API_KEY: ${SOE_API_KEY:-}
+      SOE_API_URL: ${SOE_API_URL:-https://api.yadriworks.ai}
+      SOE_MODE: enforce
+      SOE_PROXY_PORT: "15001"
+      SOE_HEALTH_PORT: "3101"
+      SOE_DEFINITIONS_DIR: /etc/soe/definitions
+      SOE_CIRCUIT_BREAKER_FAIL_MODE: ${SOE_CIRCUIT_BREAKER_FAIL_MODE:-closed}
+    volumes:
+      - ./soe-definitions:/etc/soe/definitions:ro
+    ports: ["15001:15001", "3101:3101"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3101/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks: [lendnet]
+
+  # The agent egresses PLAINTEXT to the sidecar (http:// scheme); the sidecar
+  # originates TLS upstream. Needs ANTHROPIC_API_KEY only for the chat narrative —
+  # the deterministic proof (scenarios/tls_origination_probe.py) needs no key.
+  lending-agent:
+    build: { context: ./app }
+    image: lending-assistant:local
+    container_name: lending-agent-tlsorig
+    environment:
+      HTTP_PROXY: http://soe-sidecar:15001
+      HTTPS_PROXY: http://soe-sidecar:15001     # LLM (https) tunnels via CONNECT
+      NO_PROXY: localhost,127.0.0.1
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # http:// scheme → sidecar inspects plaintext and originates TLS upstream
+      BUREAU_URL: http://api.equifax.com
+      LOS_URL: http://api.socure.com
+      MAIL_URL: http://api.dwolla.com
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      soe-sidecar: { condition: service_healthy }
+    ports: ["8090:8090"]
+    networks: [lendnet]
+
+networks:
+  lendnet: { driver: bridge }

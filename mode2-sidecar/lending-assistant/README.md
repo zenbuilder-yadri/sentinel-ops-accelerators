@@ -75,6 +75,28 @@ sudo -E bash tests/iptables-interception-test.sh    # ALL PASS
 
 See [`docs/TEST-RESULTS.md`](../../docs/TEST-RESULTS.md) for a captured run.
 
+## Content inspection (Mode 2 `tls-origination`)
+
+The sni-only demo above contains egress by **destination**. To also inspect the
+**body** without MITM, run the `tls-origination` variant: the agent egresses
+**plaintext** to the sidecar (it speaks `http://`), the sidecar inspects the body
+(deterministic PII/secret block inline + EthicalZen semantic async) and
+**originates TLS** to the real upstream.
+
+```bash
+cp .env.example .env        # ANTHROPIC_API_KEY for the chat narrative (probe needs none)
+docker compose -f docker-compose.tls-origination.yml up --build -d
+python scenarios/tls_origination_probe.py     # deterministic, no LLM key needed
+# clean → TLS-originated (real upstream) · SSN/credit-card → 403 blocked · attacker → 403 egress-deny
+```
+
+SOE: `soe-definitions/lending-assistant-tlsorig.soe.json` (`transport.httpsInspection:
+"tls-origination"`). The agent's tool URLs use `http://` so the sidecar can read +
+upgrade them; the LLM call (`https`) tunnels via CONNECT. No CA, no cert pinning.
+
+> Note: run on a stable container/pod — rapidly recreating a container on the same
+> host port can race the port release (a test harness gotcha, not a sidecar issue).
+
 ## Authentication
 
 Two separate concerns — don't conflate them:
