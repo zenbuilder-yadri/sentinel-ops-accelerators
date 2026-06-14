@@ -10,7 +10,7 @@ choose your integration based on whether you own the agent's code.
 
 | | **Mode 1 — SDK** | **Mode 2 — transparent sidecar** |
 |---|---|---|
-| Integration | ~12-line wrapper in your tool loop | **zero code** — one env-var (`HTTP_PROXY`) |
+| Integration | ~12-line wrapper in your tool loop | **zero code** — iptables transparent redirect (primary); `HTTP_PROXY` fallback |
 | Enforcement point | in-process, before each tool call | the network egress (a separate container) |
 | What it's best at | **content & decision integrity** — block PII in an outbound email, deny a tool by policy | **containment** — exfiltration is blocked on the wire even if the agent is fully prompt-injected |
 | Works on closed/3rd-party agents | — | ✅ |
@@ -77,12 +77,16 @@ Each sub-app reads its **own** `.env` (copy from the local `.env.example`).
 ## How Mode 2 contains egress
 
 ```
-lending-agent ──HTTP_PROXY──▶ soe-sidecar ──/v1/evaluate──▶ control plane
-(vanilla LangGraph,           (public image)                (api.yadriworks.ai)
- zero SOE code)                    │
-        allow-listed ─────────────┼──▶ api.anthropic.com · bureau · LOS · mail
-        denied      ──────────X───┘    attacker.example · 169.254.169.254 · pastebin
+lending-agent ──iptables REDIRECT──▶ soe-sidecar ──/v1/evaluate──▶ control plane
+(vanilla LangGraph,    (HTTP_PROXY     (public image)              (api.yadriworks.ai)
+ zero SOE code)         fallback)          │
+        allow-listed ─────────────────────┼──▶ api.anthropic.com · bureau · LOS · mail
+        denied      ──────────────────X───┘    attacker.example · 169.254.169.254 · pastebin
 ```
+
+Interception is enforced by **iptables** (works even if the app ignores proxy
+env vars); `HTTP_PROXY` is a cooperative fallback. Proof:
+[`tests/iptables-interception-test.sh`](mode2-sidecar/lending-assistant/tests/iptables-interception-test.sh).
 
 `grep -ri 'soe\|sentinel\|evaluate' mode2-sidecar/lending-assistant/app/` returns
 nothing — the agent is byte-for-byte ungoverned; containment is entirely on the wire.

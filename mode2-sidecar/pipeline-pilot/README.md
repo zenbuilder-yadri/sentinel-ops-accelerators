@@ -54,7 +54,7 @@ file a bug.
 
 ---
 
-## Scenarios (6) — `docs/demo-spec.md` §Mode 2
+## Scenarios (6)
 
 | ID         | Title                                                                | Layer under test                          | Expected | What it proves                                                                       |
 |------------|----------------------------------------------------------------------|-------------------------------------------|----------|--------------------------------------------------------------------------------------|
@@ -198,6 +198,3 @@ mode2-pipeline-pilot/
 | `grep` finds `soe` inside `agent/`                                | A future edit broke the zero-code-change invariant                          | Revert the edit — this directory is contractually clean                                                          |
 
 ---
-
-For the full demo spec (architecture, alerts, comparison panels, auth flow):
-[`docs/demo-spec.md`](../../docs/demo-spec.md).

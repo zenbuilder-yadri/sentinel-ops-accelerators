@@ -178,7 +178,8 @@ class SoeClient:
         if direction not in {"input", "output"}:
             raise ValueError("direction must be 'input' or 'output'")
         aid = agent_id or self.agent_id
-        body = {"agentId": aid, "text": text, "direction": direction}
+        body = {"agentId": aid}
+        body["input" if direction == "input" else "output"] = text
         r = self._request("POST", "/v1/guardrails/evaluate", json_body=body)
         return self._decode(r)
 
