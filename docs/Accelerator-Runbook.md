@@ -77,7 +77,7 @@ follow-up that shows the thing Mode 2 *can't* catch (PII inside an allowed actio
 Clone the repo:
 
 ```bash
-git clone https://github.com/<org>/sentinel-ops-accelerators.git
+git clone https://github.com/zenbuilder-yadri/sentinel-ops-accelerators.git
 cd sentinel-ops-accelerators
 ```
 
