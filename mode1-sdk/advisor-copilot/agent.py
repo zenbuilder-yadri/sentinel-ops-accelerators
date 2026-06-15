@@ -38,13 +38,17 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 SOE_API_URL = os.getenv("SOE_API_URL", "https://api.yadriworks.ai")
 SOE_JWT = os.getenv("SOE_JWT", "")
+# Auth is either a Bearer JWT (login-issued) OR a long-lived api key
+# (X-SOE-Api-Key). A dedicated demo tenant may be api-key only (no login), so
+# accept whichever is set — SoeClient prefers JWT, else api key.
+SOE_API_KEY = os.getenv("SOE_API_KEY", "")
 SOE_TENANT_ID = os.getenv("SOE_TENANT_ID", "yadriworks-demo")
 AGENT_ID = os.getenv("AGENT_ID", "fin-advisor-mode1")
 SESSION_ID = os.getenv("SOE_SESSION_ID", f"sess-{uuid.uuid4().hex[:12]}")
 
-if not SOE_JWT:
-    print("[warn] SOE_JWT is empty — every /v1/evaluate call will 401. "
-          "Set it in .env (copy .env.example).", file=sys.stderr)
+if not SOE_JWT and not SOE_API_KEY:
+    print("[warn] neither SOE_JWT nor SOE_API_KEY set — every /v1/evaluate call "
+          "will 401. Set one in .env (copy .env.example).", file=sys.stderr)
 if not os.getenv("ANTHROPIC_API_KEY"):
     print("[warn] ANTHROPIC_API_KEY is empty — LLM calls will fail.",
           file=sys.stderr)
@@ -53,6 +57,7 @@ if not os.getenv("ANTHROPIC_API_KEY"):
 soe = SoeClient(
     api_url=SOE_API_URL,
     jwt=SOE_JWT,
+    api_key=SOE_API_KEY,
     tenant_id=SOE_TENANT_ID,
     agent_id=AGENT_ID,
 )
@@ -271,6 +276,7 @@ def run_scenario(scenario_id: str):
         soe = SoeClient(
             api_url="http://127.0.0.1:1",
             jwt=SOE_JWT,
+            api_key=SOE_API_KEY,
             tenant_id=SOE_TENANT_ID,
             agent_id=AGENT_ID,
             timeout=2.0,
